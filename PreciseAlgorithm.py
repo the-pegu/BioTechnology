@@ -1,26 +1,28 @@
 import xml.etree.ElementTree as ET
 
 
+class Graph:
+    def __init__(self, typ):
+        self.gType = typ
+        self.vertices = []
+
+
 class Vertex:
-
-    label = ""
-    lastNuc = ""
-    type = ""
-    successors = []
-
-    def __init__(self, cell):
+    def __init__(self, ind, cell):
+        self.index = ind
         self.lastNuc = cell[-1]
-        self.check_type(cell)
+        self.vType = self.check_type(cell)
         self.label = self.replace_last_nuc(cell)
+        self.successors = []
 
     def check_type(self, cell):
         if cell[0] in ['S', 'W']:
-            self.type = 'SW'
+            return 'SW'
         else:
-            self.type = 'RY'
+            return 'RY'
 
     def replace_last_nuc(self, cell):
-        if self.type == 'SW':
+        if self.vType == 'SW':
             if self.lastNuc in ['C', 'G']:
                 return cell[:-1] + 'S'
             else:
@@ -31,16 +33,29 @@ class Vertex:
             else:
                 return cell[:-1] + 'Y'
 
-    def add_to_successors(self, vert):
-        self.successors.append(vert)
-
     def __str__(self):
-        return f"Type: {self.type}\nLabel: {self.label}\nLast Nuc: {self.lastNuc}"
+        return f"Type: {self.vType}\nLabel: {self.label}\nLast Nuc: {self.lastNuc}\nSuccessors: {self.successors}\n"
 
 
-def make_graph(spectrum):
-    a = Vertex(spectrum[0])
-    print(a)
+def if_fits(oligonA, oligonB):
+    if oligonA[1:] != oligonB[:-1]:
+        return False
+    else:
+        return True
+
+
+def make_graph(spectrum, gType):
+    graph = Graph(gType)
+    for ind, cell in enumerate(spectrum):
+        v = Vertex(ind, cell)
+        graph.vertices.append(v)
+
+    for i, vertA in enumerate(graph.vertices):
+        for j, vertB in enumerate(graph.vertices):
+            if i != j and if_fits(vertA.label, vertB.label):
+                graph.vertices[i].successors.append(vertB)
+
+    return graph
 
 
 def main():
@@ -62,10 +77,13 @@ def main():
             for cell in probe.iter('cell'):
                 rySpectrum.append(cell.text)
 
-    print(swSpectrum)
-    print(rySpectrum)
+    # print(swSpectrum)
+    # print(rySpectrum)
+    print("\n")
+    swGraph = make_graph(swSpectrum, 'SW')
 
-    make_graph(swSpectrum)
+    for i in swGraph.vertices:
+        print(i)
 
 
 if __name__ == '__main__':
