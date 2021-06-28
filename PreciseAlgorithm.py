@@ -1,17 +1,17 @@
 import xml.etree.ElementTree as ET
 
 
-# Klasa grafu, która dla ułatwienia przechowuje tylko wszystkie wierzchołki z danego spektrum
+# Klasa grafu, która dla ułatwienia przechowuje wszystkie wierzchołki z danego spektrum
 class Graph:
-    def __init__(self, typ):
-        self.gType = typ
+    def __init__(self, type):
+        self.gType = type
         self.vertices = []
 
 
 # Klasa wierzchołka w grafie
 class Vertex:
-    def __init__(self, ind, cell):
-        self.index = ind
+    def __init__(self, idx, cell):
+        self.index = idx
         self.lastNuc = cell[-1]
         self.vType = self.check_type(cell)
         self.label = self.replace_last_nuc(cell)
@@ -51,8 +51,8 @@ def if_fits(oligonA, oligonB):
 # Stworzenie grafu z danego spektrum oraz znalezienie następników dla każdego wierzchołka
 def make_graph(spectrum, gType):
     graph = Graph(gType)
-    for ind, cell in enumerate(spectrum):
-        v = Vertex(ind, cell)
+    for idx, cell in enumerate(spectrum):
+        v = Vertex(idx, cell)
         graph.vertices.append(v)
 
     for i, vertA in enumerate(graph.vertices):
@@ -93,32 +93,57 @@ def find_candidates(swVertex, ryVertex):
     return candidates
 
 
-# Wybór pierwszej pary z listy kandydatów.
-# TODO: Będzie potrzebna zmiana jak będzie już wywoływanie powrotów, żeby wybrać np. kolejną parę
-def add_first_candidates(candidates):
-    if len(candidates) > 0:
-        swVertex = candidates[0][0]
-        ryVertex = candidates[0][1]
-        return swVertex, ryVertex
-    else:
-        return None, None
+# Wewnętrzna funkcja przeszukiwania grafów równocześnie, w celu znalezienia poszukiwanej ścieżki
+def _find_path(swVisited, ryVisited, swVertex, ryVertex, length, lengthToFind, path):
+
+    if length == lengthToFind:
+        return
+
+    candidates = find_candidates(swVertex, ryVertex)
+
+    for swCandidate, ryCandidate in candidates:
+
+        if swCandidate not in swVisited and ryCandidate not in ryVisited:
+            length += 1
+            swVisited.append(swCandidate)
+            ryVisited.append(ryCandidate)
+            path[0] += swCandidate.lastNuc
+            _find_path(swVisited, ryVisited, swCandidate, ryCandidate, length, lengthToFind, path)
+
+            if len(path[0]) == lengthToFind:
+                return
+            else:
+                length -= 1
+                path[0] = path[0][:-1]
+                swVisited.remove(swCandidate)
+                ryVisited.remove(ryCandidate)
+
+    return None
 
 
-# Przeszukiwanie grafów równocześnie, w celu znalezienia poszukiwanej ścieżki
-# TODO: Wywoływanie powrotów, sprawdzenie czy to działa i ewentualna poprawa
+# Zewnętrzna funkcja przeszukiwania grafów równocześnie, w celu znalezienia poszukiwanej ścieżki
 def find_path(swGraph, ryGraph, start, lengthToFind):
     swStart, ryStart = change_start_for_both_spectrum(start)
     swVertex, ryVertex = find_first_vertices(swStart, swGraph, ryStart, ryGraph)
-    path = [[swVertex, ryVertex]]
-    length = len(start)
-    while length < lengthToFind:
-        candidates = find_candidates(swVertex, ryVertex)
-        swVertex, ryVertex = add_first_candidates(candidates)
-        if swVertex is not None and ryVertex is not None:
-            path.append([swVertex, ryVertex])
-        else:
-            break
-    return path
+    candidates = find_candidates(swVertex, ryVertex)
+    solutions = []
+
+    for swCandidate, ryCandidate in candidates:
+        swVisited, ryVisited = [], []
+        path = [start]
+        length = len(start)
+
+        if swCandidate not in swVisited and ryCandidate not in ryVisited:
+            length += 1
+            swVisited.append(swCandidate)
+            ryVisited.append(ryCandidate)
+            path[0] += swCandidate.lastNuc
+            _find_path(swVisited, ryVisited, swCandidate, ryCandidate, length, lengthToFind, path)
+
+            if len(path[0]) == lengthToFind:
+                solutions.append(path)
+
+    return solutions
 
 
 # Na razie nie jest to potrzebne i może wcale nie być, ale niech będzie
@@ -170,13 +195,13 @@ def main():
     ryGraph = make_graph(rySpectrum, 'RY')
 
     # Szukanie ścieżki w obu grafach równocześnie
-    path = find_path(swGraph, ryGraph, startOligon, length)
-    print(path)
+    paths = find_path(swGraph, ryGraph, startOligon, length)
+    # print(path)
 
     # Stworzenie wyniku by można było go ładnie wyprintować
-    result = construct_result(path, startOligon)
-    print(result)
-    print(len(result))
+    for path in paths:
+        print(path[0])
+        print(len(path[0]))
 
 
 if __name__ == '__main__':
