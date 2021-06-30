@@ -2,7 +2,8 @@ import xml.etree.ElementTree as ET
 import random
 import time
 
-POPULATION = 2
+POPULATION = 10
+SELECTION = int(POPULATION * 0.2)
 MUTATION_PROB = 0.05
 
 
@@ -23,9 +24,26 @@ class Unit:
     def __init__(self, swSeq, rySeq):
         self.swSeq = swSeq
         self.rySeq = rySeq
+        self.fitness = 0
+        self.superFitness = 0
+        self.swUsed = []
+        self.ryUsed = []
+
+    def calculate_fitness(self, length, oneOligonLength, swSpectrum, rySpectrum):
+        for inxFrom in range(length - oneOligonLength):
+            swTry = self.swSeq[inxFrom:oneOligonLength]
+            ryTry = self.rySeq[inxFrom:oneOligonLength]
+            if swTry not in self.swUsed and swTry in swSpectrum:
+                self.fitness += 1
+                self.swUsed.append(swTry)
+                if ryTry not in self.ryUsed and ryTry in rySpectrum:
+                    self.superFitness += 1
+            if ryTry not in self.ryUsed and ryTry in rySpectrum:
+                self.fitness += 1
+                self.ryUsed.append(ryTry)
 
     def __str__(self):
-        return f"{self.swSeq}\n{self.rySeq}\n"
+        return f"{self.swSeq}\n{self.rySeq}\nFitness: {self.fitness}"
 
 
 # Zmiana startowej sekwencji na odpowiadającą w danym alfabecie
@@ -35,11 +53,35 @@ def translate_start(startOligon):
     return swStart, ryStart
 
 
+def change_last_nuc_in_sw(swSpectrum):
+    swChanged = []
+    for oligon in swSpectrum:
+        s = oligon[:-1]
+        if oligon[-1] in ['C', 'G']:
+            s += 'S'
+        else:
+            s += 'W'
+        swChanged.append(s)
+    return swChanged
+
+
+def change_last_nuc_in_ry(rySpectrum):
+    ryChanged = []
+    for oligon in rySpectrum:
+        s = oligon[:-1]
+        if oligon[-1] in ['A', 'G']:
+            s += 'R'
+        else:
+            s += 'Y'
+        ryChanged.append(s)
+    return ryChanged
+
+
 # Generowanie początkowej populacji
-def generate_population(swStart, ryStart, length):
+def generate_population(swStart, ryStart, length, sizeOfPopulation):
     pop = ThePopulation()
 
-    for i in range(POPULATION):
+    for i in range(sizeOfPopulation):
         swSeq = swStart
         for _ in range(length - len(swStart)):
             swSeq += random.choice(['S', 'W'])
@@ -49,15 +91,55 @@ def generate_population(swStart, ryStart, length):
             rySeq += random.choice(['R', 'Y'])
 
         newUnit = Unit(swSeq, rySeq)
-        print(newUnit)
         pop.add_to_population(newUnit)
 
     return pop
 
 
+# Wywołanie funkcji oceny dla każdego osobnika
+def calculate_fitness(pop, length, oneOligonLength, swSpectrum, rySpectrum):
+    for unit in pop.wholePopulation:
+        unit.calculate_fitness(length, oneOligonLength, swSpectrum, rySpectrum)
+
+
+# Wybór najlepiej ocenionych osobników
+def select_best_units(pop, howMany):
+    selected_units = sorted(pop.wholePopulation, key=lambda x:x.fitness, reverse=True)
+    return selected_units[:howMany]
+
+
+# TODO: Krzyżowanie najlepszych osobników
+def crossover_of_best_units(unit_1, unit_2):
+    pass
+
+
+# TODO: Mutacja osobnika
+def mutation_of_units(unit):
+    pass
+
+
+# TODO: Kolejne iteracje algorytmu genetycznego
+def genetic_algorithm():
+    pass
+
+
+# Start algorytmu genetycznego
 def start_genetic_algorithm(startOligon, length, swSpectrum, rySpectrum):
     swStart, ryStart = translate_start(startOligon)
-    population = generate_population(swStart, ryStart, length)
+    swChanged = change_last_nuc_in_sw(swSpectrum)
+    ryChanged = change_last_nuc_in_ry(rySpectrum)
+    pop = generate_population(swStart, ryStart, length, POPULATION)
+    calculate_fitness(pop, length, len(swSpectrum[0]), swChanged, ryChanged)
+    bestUnits = select_best_units(pop, SELECTION)
+    for i in bestUnits:
+        print(i)
+
+    a = random.randint(0, len(bestUnits))
+    b = random.randint(0, len(bestUnits))
+    while b == a and len(bestUnits) != 1:
+        b = random.randint(0, len(bestUnits))
+
+    crossover_of_best_units(bestUnits[a], bestUnits[b])
 
 
 def main():
