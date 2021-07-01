@@ -2,9 +2,9 @@ import xml.etree.ElementTree as ET
 import random
 import time
 
-POPULATION = 100
-SELECTION = int(POPULATION * 0.1)
-MUTATION_PROB = 0.2
+POPULATION = 200
+SELECTION = int(POPULATION * 0.05)
+MUTATION_PROB = 0.3
 
 
 # Klasa przechowująca populacje
@@ -42,15 +42,15 @@ class Unit:
                 howManyFits = count_how_many_fits(self.rySeq[i - 1].seq, oligon.seq)
                 lenOfSeqRY += oligonLength - howManyFits
 
-        self.fitness = (lenOfSeqSW + lenOfSeqRY) / 2  # TODO - length
+        self.fitness = (lenOfSeqSW + lenOfSeqRY) / 2 - length
 
 
 class Oligon:
     def __init__(self, seq):
         self.seq = seq
 
-    # def __str__(self):
-    #     return self.seq
+    def __str__(self):
+        return self.seq
 
 
 # Zamiana ostatnich liter w spektrum SW
@@ -231,8 +231,8 @@ def crossover_of_best_units(unit_1, unit_2, numberToCreate, swSpectrum, rySpectr
 def mutation_of_unit(unitToMutate, oligonLength):
     worstSWInx = 1
     worstRYInx = 1
-    worstSWFit = 19
-    worstRYFit = 19
+    worstSWFit = oligonLength*2
+    worstRYFit = oligonLength*2
     x = random.randint(0, 100)
     if x < 25:
         for i in range(1, len(unitToMutate.swSeq)):
@@ -244,19 +244,34 @@ def mutation_of_unit(unitToMutate, oligonLength):
             if ryFit < worstRYFit:
                 worstRYInx = i
                 worstRYFit = ryFit
-    else:
+    elif x < 75:
         worstSWInx = random.randrange(1, oligonLength)
         worstRYInx = random.randrange(1, oligonLength)
 
-    unitToMutate.swNotUsed.append(unitToMutate.swSeq[worstSWInx])
-    s = random.choice(unitToMutate.swNotUsed)
-    unitToMutate.swNotUsed.remove(s)
-    unitToMutate.swSeq[worstSWInx] = s
+    if x < 75:
+        unitToMutate.swNotUsed.append(unitToMutate.swSeq[worstSWInx])
+        s = random.choice(unitToMutate.swNotUsed)
+        unitToMutate.swNotUsed.remove(s)
+        unitToMutate.swSeq[worstSWInx] = s
 
-    unitToMutate.ryNotUsed.append(unitToMutate.rySeq[worstRYInx])
-    r = random.choice(unitToMutate.ryNotUsed)
-    unitToMutate.ryNotUsed.remove(r)
-    unitToMutate.rySeq[worstRYInx] = r
+        unitToMutate.ryNotUsed.append(unitToMutate.rySeq[worstRYInx])
+        r = random.choice(unitToMutate.ryNotUsed)
+        unitToMutate.ryNotUsed.remove(r)
+        unitToMutate.rySeq[worstRYInx] = r
+    else:
+        swInx1 = random.randrange(1, oligonLength)
+        swInx2 = random.randrange(1, oligonLength)
+
+        temp = unitToMutate.swSeq[swInx1]
+        unitToMutate.swSeq[swInx1] = unitToMutate.swSeq[swInx2]
+        unitToMutate.swSeq[swInx2] = temp
+
+        ryInx1 = random.randrange(1, oligonLength)
+        ryInx2 = random.randrange(1, oligonLength)
+
+        temp = unitToMutate.rySeq[ryInx1]
+        unitToMutate.rySeq[ryInx1] = unitToMutate.rySeq[ryInx2]
+        unitToMutate.rySeq[ryInx2] = temp
 
 
 # Generowanie nowej populacji z najlepiej ocenionych osobników z wykorzystaniem krzyżowania i mutacji
@@ -323,18 +338,28 @@ def start_genetic_algorithm(start, length, oligonLength, swSpectrum, rySpectrum)
     swStart, ryStart = translate_start(start)
     pop = generate_population(swStart, ryStart, swSpectrum, rySpectrum, numberToCreate, POPULATION)
     gen = 1
+    genBestFitness = length*2
+    turnsWithoutChange = 0
     while True:
+        changed = False
         calculate_fitness_for_population(pop, length, oligonLength)
         bestUnits = select_best_units(pop, SELECTION)
         print(f"Generation: {gen} Best Units:", end="")
         for i in bestUnits:
             print(f" {i.fitness}", end="")
-            if i.fitness <= length:
+            if i.fitness < genBestFitness:
+                genBestFitness = i.fitness
+                changed = True
+            if i.fitness <= 1:
                 solution = check_if_found_solution(i, length, oligonLength)
                 print("Found Solution!")
                 print(solution)
                 return
-        print("")
+        if changed:
+            turnsWithoutChange = 0
+        else:
+            turnsWithoutChange += 1
+        print(f"   -----   Turns without change: {turnsWithoutChange}")
         pop = generate_new_population_from_the_best(bestUnits, numberToCreate, oligonLength, swSpectrum, rySpectrum, POPULATION)
 
         gen += 1
