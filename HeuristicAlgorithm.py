@@ -42,6 +42,9 @@ class Unit:
                 self.fitness += 1
                 self.ryUsed.append(ryTry)
 
+    def mutate(self, oligonLength, length, swSpectrum, rySpectrum):
+        pass
+
     def __str__(self):
         return f"{self.swSeq}\n{self.rySeq}\nFitness: {self.fitness}"
 
@@ -109,13 +112,23 @@ def select_best_units(pop, howMany):
 
 
 # TODO: Krzyżowanie najlepszych osobników
-def crossover_of_best_units(unit_1, unit_2):
-    pass
+def crossover_of_best_units(unit_1, unit_2, oligonLength, length):
+    swSeqNew = unit_1.swSeq[:oligonLength]
+    rySeqNew = unit_1.rySeq[:oligonLength]
+    for inx in range(oligonLength, length):
+        if random.randint(0, 1) == 0:
+            swSeqNew += unit_1.swSeq[inx]
+            rySeqNew += unit_1.rySeq[inx]
+        else:
+            swSeqNew += unit_2.swSeq[inx]
+            rySeqNew += unit_2.rySeq[inx]
+
+    return Unit(swSeqNew, rySeqNew)
 
 
 # TODO: Mutacja osobnika
-def mutation_of_units(unit):
-    pass
+def mutation_of_unit(unitToMutate, oligonLength, length, swSpectrum, rySpectrum):
+    unitToMutate.mutate(oligonLength, length, swSpectrum, rySpectrum)
 
 
 # TODO: Kolejne iteracje algorytmu genetycznego
@@ -139,8 +152,9 @@ def start_genetic_algorithm(startOligon, length, swSpectrum, rySpectrum):
     while b == a and len(bestUnits) != 1:
         b = random.randint(0, len(bestUnits))
 
-    crossover_of_best_units(bestUnits[a], bestUnits[b])
-
+    newUnit = crossover_of_best_units(bestUnits[a], bestUnits[b], len(swSpectrum[0]), length)
+    if random.randrange(0, 101) / 100 < MUTATION_PROB:
+        newUnit.mutate(len(swSpectrum[0]), length, swSpectrum, rySpectrum)
 
 def main():
     # Zabawa z plikiem xml
