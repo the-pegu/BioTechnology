@@ -151,14 +151,6 @@ def select_best_units(pop, howMany):
     return selected_units[:howMany]
 
 
-# Znajdź indeks w tablicy, jeśli taki element się znajduję
-def check_if_in_array(seq, array):
-    for i in range(len(array)):
-        if array[i].seq == seq:
-            return i
-    return None
-
-
 # Krzyżowanie najlepszych osobników
 def crossover_of_best_units(unit_1, unit_2, oligonLength, length, swSpectrum, rySpectrum):
     swSeqNew = [unit_1.swSeq[0]]
@@ -187,13 +179,19 @@ def crossover_of_best_units(unit_1, unit_2, oligonLength, length, swSpectrum, ry
             swNotUsed.remove(unit_1.swSeq[i])
         else:
             notAdded = True
-            while notAdded:
+            safety = 0
+            while notAdded and safety < 10:
                 sU = random.choice([unit_1, unit_2])
                 sx = random.choice(sU.swNotUsed)
+                safety += 1
                 if sx in swNotUsed:
                     swSeqNew.append(sx)
                     swNotUsed.remove(sx)
                     notAdded = False
+            if notAdded:
+                sx = random.choice(swNotUsed)
+                swSeqNew.append(sx)
+                swNotUsed.remove(sx)
 
         if unit_1.rySeq[i] in ryNotUsed and unit_2.rySeq[i] in ryNotUsed:
             ryU1Fit = count_how_many_fits(rySeqNew[i - 1].seq, unit_1.rySeq[i].seq)
@@ -212,32 +210,43 @@ def crossover_of_best_units(unit_1, unit_2, oligonLength, length, swSpectrum, ry
             ryNotUsed.remove(unit_1.rySeq[i])
         else:
             notAdded = True
-            while notAdded:
+            safety = 0
+            while notAdded and safety < 10:
                 rU = random.choice([unit_1, unit_2])
                 rx = random.choice(rU.ryNotUsed)
+                safety += 1
                 if rx in ryNotUsed:
                     rySeqNew.append(rx)
                     ryNotUsed.remove(rx)
                     notAdded = False
+            if notAdded:
+                rx = random.choice(ryNotUsed)
+                rySeqNew.append(rx)
+                ryNotUsed.remove(rx)
 
     return Unit(swSeqNew, rySeqNew, swNotUsed, ryNotUsed)
 
 
 # Mutacja osobnika
-def mutation_of_unit(unitToMutate):
+def mutation_of_unit(unitToMutate, oligonLength):
     worstSWInx = 1
     worstRYInx = 1
     worstSWFit = 19
     worstRYFit = 19
-    for i in range(1, len(unitToMutate.swSeq)):
-        swFit = count_how_many_fits(unitToMutate.swSeq[i-1].seq, unitToMutate.swSeq[i].seq)
-        ryFit = count_how_many_fits(unitToMutate.rySeq[i-1].seq, unitToMutate.rySeq[i].seq)
-        if swFit < worstSWFit:
-            worstSWInx = i
-            worstSWFit = swFit
-        if ryFit < worstRYFit:
-            worstRYInx = i
-            worstRYFit = ryFit
+    x = random.randint(0, 100)
+    if x < 25:
+        for i in range(1, len(unitToMutate.swSeq)):
+            swFit = count_how_many_fits(unitToMutate.swSeq[i-1].seq, unitToMutate.swSeq[i].seq)
+            ryFit = count_how_many_fits(unitToMutate.rySeq[i-1].seq, unitToMutate.rySeq[i].seq)
+            if swFit < worstSWFit:
+                worstSWInx = i
+                worstSWFit = swFit
+            if ryFit < worstRYFit:
+                worstRYInx = i
+                worstRYFit = ryFit
+    else:
+        worstSWInx = random.randrange(1, oligonLength)
+        worstRYInx = random.randrange(1, oligonLength)
 
     unitToMutate.swNotUsed.append(unitToMutate.swSeq[worstSWInx])
     s = random.choice(unitToMutate.swNotUsed)
@@ -261,13 +270,56 @@ def generate_new_population_from_the_best(bestUnits, length, oligonLength, swSpe
         newUnit = crossover_of_best_units(a, b, oligonLength, length, swSpectrum, rySpectrum)
 
         if random.randrange(101) / 100 < MUTATION_PROB:
-            mutation_of_unit(newUnit)
+            mutation_of_unit(newUnit, oligonLength)
         pop.add_to_population(newUnit)
     return pop
 
 
+# Zwróci Nukleotyd z alfabetu {A, C, G, T} w oparciu o złożenie dwóch liter z alfabetu {S, W} oraz {R, Y}
+def return_nucleotide(sw, ry):
+    if sw == 'W' and ry == 'R':
+        return 'A'
+    elif sw == 'S' and ry == 'Y':
+        return 'C'
+    elif sw == 'S' and ry == 'R':
+        return 'G'
+    else:
+        return 'T'
+
+
+# Buduje znalezione rozwiązanie korzystając z alfabetu {A, C, G, T}
+def construct_result(swSeq, rySeq):
+    print(f"swLength: {len(swSeq)}  |  ryLength: {len(rySeq)}")
+    result = ""
+    for i in range(len(swSeq)):
+        result += return_nucleotide(swSeq[i], rySeq[i])
+    return result
+
+
+# Sprawdza znalezione rozwiązanie
+def check_if_found_solution(unit, length, oligonLength):
+    sw = ""
+    ry = ""
+    for i, swOligon in enumerate(unit.swSeq):
+        if i == 0:
+            sw += swOligon.seq[:]
+        else:
+            howManyFits = count_how_many_fits(unit.swSeq[i - 1].seq, swOligon.seq)
+            sw += swOligon.seq[-(oligonLength-howManyFits):]
+
+    for i, ryOligon in enumerate(unit.rySeq):
+        if i == 0:
+            ry += ryOligon.seq[:]
+        else:
+            howManyFits = count_how_many_fits(unit.rySeq[i-1].seq, ryOligon.seq)
+            ry += ryOligon.seq[-(oligonLength-howManyFits):]
+
+    return construct_result(sw, ry)
+
+
+# Rozpoczyna algorytm genetyczny w celu znalezienia sekwencji DNA o podanej długości
 def start_genetic_algorithm(start, length, oligonLength, swSpectrum, rySpectrum):
-    numberToCreate = length - oligonLength
+    numberToCreate = length - oligonLength + 1
     swStart, ryStart = translate_start(start)
     pop = generate_population(swStart, ryStart, swSpectrum, rySpectrum, numberToCreate, POPULATION)
     gen = 1
@@ -277,8 +329,14 @@ def start_genetic_algorithm(start, length, oligonLength, swSpectrum, rySpectrum)
         print(f"Generation: {gen} Best Units:", end="")
         for i in bestUnits:
             print(f" {i.fitness}", end="")
+            if i.fitness <= length:
+                solution = check_if_found_solution(i, length, oligonLength)
+                print("Found Solution!")
+                print(solution)
+                return
         print("")
         pop = generate_new_population_from_the_best(bestUnits, length, oligonLength, swSpectrum, rySpectrum, POPULATION)
+
         gen += 1
 
 
@@ -305,7 +363,7 @@ def main():
     print("Length of one oligon: ", len(swSpectrum[0]))
     print("Length of SW Spectrum: ", len(swSpectrum))
     print("Length of RY Spectrum: ", len(rySpectrum))
-    print("Number of Oligons for perfect solutions: ", length - len(swSpectrum[0]))
+    print("Number of Oligons for perfect solutions: ", length - len(swSpectrum[0]) + 1)
 
     swOligons = change_last_nuc_in_sw(swSpectrum)
     ryOligons = change_last_nuc_in_ry(rySpectrum)
