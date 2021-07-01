@@ -2,9 +2,10 @@ import xml.etree.ElementTree as ET
 import random
 import time
 
-POPULATION = 200
+POPULATION = 250
 SELECTION = int(POPULATION * 0.05)
-MUTATION_PROB = 0.3
+MUTATION_PROB = 0.25
+GENERATIONS_TO_STOP = 25000
 
 
 # Klasa przechowująca populacje
@@ -337,9 +338,9 @@ def little_schuffle(pop, numberToCreate, oligonLength):
     for unit in pop.wholePopulation:
         whichOne = random.choice(['SW', 'RY'])
         typeOfSchuffle = random.choice(['SWAP', 'EXCHANGE'])
-        for i in range(int(numberToCreate/2)):
-            o1 = random.randrange(1, oligonLength)
-            o2 = random.randrange(1, oligonLength)
+        for i in range(numberToCreate-1):
+            o1 = random.randrange(1, int(oligonLength/2))
+            o2 = random.randrange(int(oligonLength/2), oligonLength)
             if whichOne == 'SW' and len(unit.swNotUsed) == 0:
                 typeOfSchuffle = 'SWAP'
             if whichOne == 'RY' and len(unit.ryNotUsed) == 0:
@@ -373,19 +374,25 @@ def start_genetic_algorithm(start, length, oligonLength, swSpectrum, rySpectrum)
     swStart, ryStart = translate_start(start)
     pop = generate_population(swStart, ryStart, swSpectrum, rySpectrum, numberToCreate, POPULATION)
     gen = 1
-    genBestFitness = length * 2
+    genBestFitness = length * length
+    absolutelyTheBest = length * length
     turnsWithoutChange = 0
-    while True:
+    turnsWithoutChange2 = 0
+    while gen <= GENERATIONS_TO_STOP:
         changed = False
+        changed2 = False
         calculate_fitness_for_population(pop, length, oligonLength)
         bestUnits = select_best_units(pop, SELECTION)
         print(f"Generation: {gen} Best Units:", end="")
         for i in bestUnits:
             print(f" {i.fitness}", end="")
             if i.fitness < genBestFitness:
+                if i.fitness < absolutelyTheBest:
+                    absolutelyTheBest = i.fitness
+                    changed2 = True
                 genBestFitness = i.fitness
                 changed = True
-            if i.fitness <= 1:
+            if i.fitness <= 0:
                 solution = check_if_found_solution(i, length, oligonLength)
                 print("Found Solution!")
                 print(solution)
@@ -394,11 +401,19 @@ def start_genetic_algorithm(start, length, oligonLength, swSpectrum, rySpectrum)
             turnsWithoutChange = 0
         else:
             turnsWithoutChange += 1
-        print(f"   -----   Turns without change: {turnsWithoutChange}")
+        if changed2:
+            turnsWithoutChange2 = 0
+        else:
+            turnsWithoutChange2 += 1
+        print(f"   -----   Turns without change: {turnsWithoutChange}  2: {turnsWithoutChange2}  - The Best: {absolutelyTheBest}")
         if turnsWithoutChange >= 300:
             pop = little_schuffle(pop, numberToCreate, oligonLength)
-            genBestFitness = length * 2
+            genBestFitness = length * length
             turnsWithoutChange = 0
+        elif turnsWithoutChange2 >= 1600:
+            pop = generate_population(swStart, ryStart, swSpectrum, rySpectrum, numberToCreate, POPULATION)
+            genBestFitness = length * length
+            turnsWithoutChange2 = 0
         else:
             pop = generate_new_population_from_the_best(bestUnits, numberToCreate, oligonLength, swSpectrum, rySpectrum, POPULATION)
         gen += 1
