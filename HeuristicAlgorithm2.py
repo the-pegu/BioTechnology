@@ -332,13 +332,48 @@ def check_if_found_solution(unit, length, oligonLength):
     return construct_result(sw, ry)
 
 
+# Przelosowanie kolejności oligonukleotydów, gdy zbyt długi czas nie zmienia się najlepszy wynik w populacji
+def little_schuffle(pop, numberToCreate, oligonLength):
+    for unit in pop.wholePopulation:
+        whichOne = random.choice(['SW', 'RY'])
+        typeOfSchuffle = random.choice(['SWAP', 'EXCHANGE'])
+        for i in range(int(numberToCreate/2)):
+            o1 = random.randrange(1, oligonLength)
+            o2 = random.randrange(1, oligonLength)
+            if whichOne == 'SW' and len(unit.swNotUsed) == 0:
+                typeOfSchuffle = 'SWAP'
+            if whichOne == 'RY' and len(unit.ryNotUsed) == 0:
+                typeOfSchuffle = 'SWAP'
+
+            if whichOne == 'SW' and typeOfSchuffle == 'SWAP':
+                temp1 = unit.swSeq[o1]
+                unit.swSeq[o1] = unit.swSeq[o2]
+                unit.swSeq[o2] = temp1
+            elif whichOne == 'RY' and typeOfSchuffle == 'SWAP':
+                temp2 = unit.rySeq[o1]
+                unit.rySeq[o1] = unit.rySeq[o2]
+                unit.rySeq[o2] = temp2
+            elif whichOne == 'SW' and typeOfSchuffle == 'EXCHANGE':
+                s = random.choice(unit.swNotUsed)
+                unit.swNotUsed.append(unit.swSeq[o1])
+                unit.swNotUsed.remove(s)
+                unit.swSeq[o1] = s
+            else:
+                r = random.choice(unit.ryNotUsed)
+                unit.ryNotUsed.append(unit.rySeq[o1])
+                unit.ryNotUsed.remove(r)
+                unit.rySeq[o1] = r
+            q = unit.fitness
+    return pop
+
+
 # Rozpoczyna algorytm genetyczny w celu znalezienia sekwencji DNA o podanej długości
 def start_genetic_algorithm(start, length, oligonLength, swSpectrum, rySpectrum):
     numberToCreate = length - oligonLength + 1
     swStart, ryStart = translate_start(start)
     pop = generate_population(swStart, ryStart, swSpectrum, rySpectrum, numberToCreate, POPULATION)
     gen = 1
-    genBestFitness = length*2
+    genBestFitness = length * 2
     turnsWithoutChange = 0
     while True:
         changed = False
@@ -360,8 +395,12 @@ def start_genetic_algorithm(start, length, oligonLength, swSpectrum, rySpectrum)
         else:
             turnsWithoutChange += 1
         print(f"   -----   Turns without change: {turnsWithoutChange}")
-        pop = generate_new_population_from_the_best(bestUnits, numberToCreate, oligonLength, swSpectrum, rySpectrum, POPULATION)
-
+        if turnsWithoutChange >= 300:
+            pop = little_schuffle(pop, numberToCreate, oligonLength)
+            genBestFitness = length * 2
+            turnsWithoutChange = 0
+        else:
+            pop = generate_new_population_from_the_best(bestUnits, numberToCreate, oligonLength, swSpectrum, rySpectrum, POPULATION)
         gen += 1
 
 
