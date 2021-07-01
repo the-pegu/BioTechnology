@@ -2,14 +2,15 @@ import xml.etree.ElementTree as ET
 import random
 import time
 
-POPULATION = 20
-SELECTION = int(POPULATION * 0.2)
-MUTATION_PROB = 0.3
+POPULATION = 100
+SELECTION = int(POPULATION * 0.1)
+MUTATION_PROB = 0.2
 
 
 # Klasa przechowująca populacje
 class ThePopulation:
-    wholePopulation = []
+    def __init__(self):
+        self.wholePopulation = []
 
     def add_to_population(self, unit):
         self.wholePopulation.append(unit)
@@ -82,7 +83,7 @@ def change_last_nuc_in_ry(rySpectrum):
 def translate_start(startOligon):
     swStart = startOligon.replace('A', 'W').replace('C', 'S').replace('G', 'S').replace('T', 'W')
     ryStart = startOligon.replace('A', 'R').replace('C', 'Y').replace('G', 'R').replace('T', 'Y')
-    return Oligon(swStart), Oligon(ryStart)
+    return swStart, ryStart
 
 
 # Generowanie początkowej populacji
@@ -91,11 +92,11 @@ def generate_population(swStart, ryStart, swSpectrum, rySpectrum, numberOfOligon
     swInx = 0
     ryInx = 0
     for k in range(len(swSpectrum)):
-        if swSpectrum[k].seq == swStart.seq:
+        if swSpectrum[k].seq == swStart:
             swInx = k
             break
     for k in range(len(rySpectrum)):
-        if rySpectrum[k].seq == ryStart.seq:
+        if rySpectrum[k].seq == ryStart:
             ryInx = k
             break
 
@@ -105,10 +106,10 @@ def generate_population(swStart, ryStart, swSpectrum, rySpectrum, numberOfOligon
         ryNotUsed = rySpectrum.copy()
         ryNUlength = len(ryNotUsed) - 1
 
-        swSeq = [swStart]
-        swNotUsed.remove(swNotUsed[swInx])
-        rySeq = [ryStart]
-        ryNotUsed.remove(ryNotUsed[ryInx])
+        swSeq = [swSpectrum[swInx]]
+        swNotUsed.remove(swSpectrum[swInx])
+        rySeq = [rySpectrum[ryInx]]
+        ryNotUsed.remove(rySpectrum[ryInx])
 
         for j in range(numberOfOligons-1):
             x1 = random.randrange(0, swNUlength)
@@ -165,12 +166,8 @@ def crossover_of_best_units(unit_1, unit_2, oligonLength, length, swSpectrum, ry
     swNotUsed = swSpectrum.copy()
     ryNotUsed = rySpectrum.copy()
 
-    swInx = check_if_in_array(unit_1.swSeq[0], swNotUsed)
-    ryInx = check_if_in_array(unit_1.rySeq[0], ryNotUsed)
-    if swInx is not None:
-        swNotUsed.remove(swNotUsed[swInx])
-    if ryInx is not None:
-        ryNotUsed.remove(ryNotUsed[ryInx])
+    swNotUsed.remove(unit_1.swSeq[0])
+    ryNotUsed.remove(unit_1.rySeq[0])
 
     for i in range(1, length - oligonLength - 1):
         if unit_1.swSeq[i] in swNotUsed and unit_2.swSeq[i] in swNotUsed:
@@ -191,9 +188,9 @@ def crossover_of_best_units(unit_1, unit_2, oligonLength, length, swSpectrum, ry
         else:
             notAdded = True
             while notAdded:
-                sx = random.choice(unit_1.swNotUsed)
-                sInx = check_if_in_array(sx.seq, swNotUsed)
-                if sInx is not None:
+                sU = random.choice([unit_1, unit_2])
+                sx = random.choice(sU.swNotUsed)
+                if sx in swNotUsed:
                     swSeqNew.append(sx)
                     swNotUsed.remove(sx)
                     notAdded = False
@@ -216,9 +213,9 @@ def crossover_of_best_units(unit_1, unit_2, oligonLength, length, swSpectrum, ry
         else:
             notAdded = True
             while notAdded:
-                rx = random.choice(unit_1.ryNotUsed)
-                rInx = check_if_in_array(rx.seq, ryNotUsed)
-                if rInx is not None:
+                rU = random.choice([unit_1, unit_2])
+                rx = random.choice(rU.ryNotUsed)
+                if rx in ryNotUsed:
                     rySeqNew.append(rx)
                     ryNotUsed.remove(rx)
                     notAdded = False
@@ -266,7 +263,6 @@ def generate_new_population_from_the_best(bestUnits, length, oligonLength, swSpe
         if random.randrange(101) / 100 < MUTATION_PROB:
             mutation_of_unit(newUnit)
         pop.add_to_population(newUnit)
-
     return pop
 
 
