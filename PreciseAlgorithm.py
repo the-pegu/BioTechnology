@@ -1,6 +1,9 @@
 import xml.etree.ElementTree as ET
 
 
+FILE = 'example2.xml'
+
+
 # Klasa grafu, która dla ułatwienia przechowuje wszystkie wierzchołki z danego spektrum
 class Graph:
     def __init__(self, type):
@@ -172,7 +175,7 @@ def construct_result(path, start):
 
 def main():
     # Zabawa z plikiem xml
-    tree = ET.parse('example.xml')
+    tree = ET.parse(FILE)
     root = tree.getroot()
     key = root.attrib['key']
     length = int(root.attrib['length'])
@@ -200,8 +203,8 @@ def main():
 
     # Stworzenie wyniku by można było go ładnie wyprintować
     for path in paths:
-        print(path[0])
-        print(len(path[0]))
+        print(f"Result: {path[0]}")
+        # print(len(path[0]))
 
 
 if __name__ == '__main__':

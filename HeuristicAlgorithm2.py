@@ -2,6 +2,8 @@ import xml.etree.ElementTree as ET
 import random
 import time
 
+
+FILE = 'example2.xml'
 POPULATION = 250
 SELECTION = int(POPULATION * 0.05)
 MUTATION_PROB = 0.25
@@ -421,7 +423,7 @@ def start_genetic_algorithm(start, length, oligonLength, swSpectrum, rySpectrum)
 
 def main():
     # Zabawa z plikiem xml
-    tree = ET.parse('example2.xml')
+    tree = ET.parse(FILE)
     root = tree.getroot()
     key = root.attrib['key']
     length = int(root.attrib['length'])
