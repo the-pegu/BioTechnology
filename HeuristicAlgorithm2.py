@@ -152,7 +152,7 @@ def select_best_units(pop, howMany):
 
 
 # Krzyżowanie najlepszych osobników
-def crossover_of_best_units(unit_1, unit_2, oligonLength, length, swSpectrum, rySpectrum):
+def crossover_of_best_units(unit_1, unit_2, numberToCreate, swSpectrum, rySpectrum):
     swSeqNew = [unit_1.swSeq[0]]
     rySeqNew = [unit_1.rySeq[0]]
     swNotUsed = swSpectrum.copy()
@@ -161,7 +161,7 @@ def crossover_of_best_units(unit_1, unit_2, oligonLength, length, swSpectrum, ry
     swNotUsed.remove(unit_1.swSeq[0])
     ryNotUsed.remove(unit_1.rySeq[0])
 
-    for i in range(1, length - oligonLength - 1):
+    for i in range(1, numberToCreate):
         if unit_1.swSeq[i] in swNotUsed and unit_2.swSeq[i] in swNotUsed:
             swU1Fit = count_how_many_fits(swSeqNew[i - 1].seq, unit_1.swSeq[i].seq)
             swU2Fit = count_how_many_fits(swSeqNew[i - 1].seq, unit_2.swSeq[i].seq)
@@ -260,14 +260,14 @@ def mutation_of_unit(unitToMutate, oligonLength):
 
 
 # Generowanie nowej populacji z najlepiej ocenionych osobników z wykorzystaniem krzyżowania i mutacji
-def generate_new_population_from_the_best(bestUnits, length, oligonLength, swSpectrum, rySpectrum, sizeOfPopulation):
+def generate_new_population_from_the_best(bestUnits, numberToCreate, oligonLength, swSpectrum, rySpectrum, sizeOfPopulation):
     pop = ThePopulation()
     for i in range(sizeOfPopulation):
         a = random.choice(bestUnits)
         b = random.choice(bestUnits)
         while b == a:
             b = random.choice(bestUnits)
-        newUnit = crossover_of_best_units(a, b, oligonLength, length, swSpectrum, rySpectrum)
+        newUnit = crossover_of_best_units(a, b, numberToCreate, swSpectrum, rySpectrum)
 
         if random.randrange(101) / 100 < MUTATION_PROB:
             mutation_of_unit(newUnit, oligonLength)
@@ -335,7 +335,7 @@ def start_genetic_algorithm(start, length, oligonLength, swSpectrum, rySpectrum)
                 print(solution)
                 return
         print("")
-        pop = generate_new_population_from_the_best(bestUnits, length, oligonLength, swSpectrum, rySpectrum, POPULATION)
+        pop = generate_new_population_from_the_best(bestUnits, numberToCreate, oligonLength, swSpectrum, rySpectrum, POPULATION)
 
         gen += 1
 
